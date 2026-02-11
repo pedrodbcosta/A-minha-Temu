@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loja Online de Pedro</title>
+<style>
+body {font-family: Arial, sans-serif; margin:0; padding:0; background:#f9f9f9;}
+header {background:#4CAF50; color:white; padding:20px; text-align:center;}
+h1 {margin:0;}
+.container {display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; padding:20px;}
+.product {background:white; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.2); text-align:center;}
+button {background:#4CAF50; color:white; border:none; padding:10px 15px; border-radius:5px; cursor:pointer; margin-top:10px;}
+button:hover {background:#45a049;}
+#cart {position:fixed; top:20px; right:20px; background:#fff; padding:15px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.3);}
+#controlPanelBtn {margin-left:10px;}
+#loginModal {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center;}
+#loginModalContent {background:white; padding:20px; border-radius:10px; width:300px; text-align:center;}
+#controlPanel {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f9f9f9; overflow:auto; padding:20px;}
+#controlPanel h2 {text-align:center;}
+input, select {padding:8px; width:90%; margin:5px 0;}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Loja Online de Pedro</h1>
+<button id="controlPanelBtn">Painel de Controlo</button>
+</header>
+
+<div class="container" id="productContainer"></div>
+
+<div id="cart">
+<h3>Carrinho</h3>
+<ul id="cartItems"></ul>
+<p>Total: €<span id="cartTotal">0.00</span></p>
+<button onclick="checkout()">Finalizar Compra</button>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal">
+  <div id="loginModalContent">
+    <h2>Palavra-passe do Painel</h2>
+    <input type="password" id="passwordInput" placeholder="Palavra-passe">
+    <button onclick="login()">Entrar</button>
+    <p id="loginError" style="color:red;"></p>
+  </div>
+</div>
+
+<!-- Control Panel -->
+<div id="controlPanel">
+<h2>Painel de Controlo</h2>
+<button onclick="closePanel()">Fechar Painel</button>
+
+<h3>Adicionar Produto</h3>
+<input type="text" id="newName" placeholder="Nome">
+<input type="number" id="newPrice" placeholder="Preço" step="0.01">
+<button onclick="addProduct()">Adicionar</button>
+
+<h3>Editar / Remover Produtos</h3>
+<div id="editContainer"></div>
+
+</div>
+
+<script>
+// Produtos iniciais (sem imagens)
+let products = [
+{nome:"Chapéus", preco:7.99},
+{nome:"Bonecos Minecraft", preco:2.00},
+{nome:"Jogo basquetebol", preco:15.99},
+{nome:"Avião", preco:40.00},
+{nome:"Caleidoscópio", preco:5.50},
+{nome:"Robot", preco:61.99},
+{nome:"Pop It eletrónico", preco:10.99},
+{nome:"Diário de um banana", preco:13.47},
+{nome:"Os Cinco", preco:10.37},
+{nome:"Manual de Minecraft", preco:14.00},
+{nome:"As aventuras de Mike", preco:11.00},
+{nome:"David Walliams", preco:14.00},
+{nome:"Dicionário", preco:5.04},
+{nome:"Estradas Lego", preco:13.00},
+{nome:"Carros Pequenos", preco:3.00},
+{nome:"Carros Médios", preco:10.00},
+{nome:"Carros Grandes", preco:40.00},
+{nome:"Carrinha Obras", preco:40.00},
+{nome:"Acessórios/ bonecos Play Mobile", preco:2.00},
+{nome:"Cães de Peluche", preco:20.00},
+{nome:"Volante", preco:100.00},
+{nome:"Comando jogos", preco:32.00},
+{nome:"Chão de puzzle (unidade)", preco:5.00},
+{nome:"Saco", preco:3.00},
+{nome:"Escola Play Mobile", preco:90.00},
+{nome:"Carros Play Mobile", preco:35.99},
+{nome:"Bicicletas Play Mobile", preco:2.00},
+{nome:"Tendas Play Mobile", preco:10.00},
+{nome:"Blocos de madeira (unidade)", preco:3.00}
+];
+
+let cart = [];
+
+// Mostrar produtos
+function displayProducts() {
+    const container = document.getElementById("productContainer");
+    container.innerHTML = "";
+    products.forEach((p,i)=>{
+        const div = document.createElement("div");
+        div.className = "product";
+        div.innerHTML = `
+        <h3>${p.nome}</h3>
+        <p>€${p.preco.toFixed(2)}</p>
+        <button onclick="addToCart(${i})">Adicionar ao carrinho</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// Carrinho
+function addToCart(index){
+    cart.push(products[index]);
+    updateCart();
+}
+function updateCart(){
+    const list = document.getElementById("cartItems");
+    const total = document.getElementById("cartTotal");
+    list.innerHTML = "";
+    let sum = 0;
+    cart.forEach((p,i)=>{
+        const li = document.createElement("li");
+        li.innerHTML = `${p.nome} - €${p.preco.toFixed(2)} <button onclick="removeFromCart(${i})">Remover</button>`;
+        list.appendChild(li);
+        sum += p.preco;
+    });
+    total.textContent = sum.toFixed(2);
+}
+function removeFromCart(index){
+    cart.splice(index,1);
+    updateCart();
+}
+
+// Finalizar compra (abre Gmail)
+function checkout(){
+    if(cart.length===0){alert("O carrinho está vazio!"); return;}
+    let body = "Resumo da encomenda:%0A";
+    cart.forEach(p=>{body += `${p.nome} - €${p.preco.toFixed(2)}%0A`});
+    const total = cart.reduce((a,b)=>a+b.preco,0).toFixed(2);
+    body += `Total: €${total}`;
+    const destinatario = "pedrodbcosta@gmail.com";
+    const assunto = "Encomenda";
+    const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${destinatario}&su=${encodeURIComponent(assunto)}&body=${body}`;
+    window.open(gmailLink,"_blank");
+}
+
+// Painel de Controlo
+const password = "2015";
+const loginModal = document.getElementById("loginModal");
+const controlPanel = document.getElementById("controlPanel");
+const loginError = document.getElementById("loginError");
+document.getElementById("controlPanelBtn").addEventListener("click", ()=>{
+    loginModal.style.display="flex";
+});
+function login(){
+    const input = document.getElementById("passwordInput").value;
+    if(input === password){
+        loginModal.style.display="none";
+        controlPanel.style.display="block";
+        renderEditProducts();
+        // Limpar qualquer código temporário
+        document.getElementById("newName").value="";
+        document.getElementById("newPrice").value="";
+    } else {loginError.textContent="Palavra-passe incorreta!";}
+}
+function closePanel(){
+    controlPanel.style.display="none";
+    // Apagar inputs do painel quando fechar
+    document.getElementById("newName").value="";
+    document.getElementById("newPrice").value="";
+}
+
+// Adicionar produto
+function addProduct(){
+    const name = document.getElementById("newName").value;
+    const price = parseFloat(document.getElementById("newPrice").value);
+    if(name && !isNaN(price)){
+        products.push({nome:name, preco:price});
+        displayProducts();
+        renderEditProducts();
+        document.getElementById("newName").value="";
+        document.getElementById("newPrice").value="";
+    }
+}
+
+// Editar / Remover produtos
+function renderEditProducts(){
+    const container = document.getElementById("editContainer");
+    container.innerHTML="";
+    products.forEach((p,i)=>{
+        const div = document.createElement("div");
+        div.innerHTML = `
+        ${p.nome} - €${p.preco.toFixed(2)}
+        <button onclick="editProduct(${i})">Editar</button>
+        <button onclick="removeProduct(${i})">Remover</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function editProduct(index){
+    const name = prompt("Novo nome:", products[index].nome);
+    const price = parseFloat(prompt("Novo preço:", products[index].preco));
+    if(name && !isNaN(price)){
+        products[index] = {nome:name, preco:price};
+        displayProducts();
+        renderEditProducts();
+    }
+}
+function removeProduct(index){
+    if(confirm(`Remover ${products[index].nome}?`)){
+        products.splice(index,1);
+        displayProducts();
+        renderEditProducts();
+    }
+}
+
+displayProducts();
+</script>
+</body>
+</html>
